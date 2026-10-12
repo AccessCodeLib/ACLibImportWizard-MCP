@@ -121,6 +121,8 @@ uv run ruff format --check .
 Tests marked `integration` need Microsoft Access. Test databases go into `testdata\` (git-ignored, must be
 a trusted location).
 
+Branches, pull requests and releases: see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
 [MIT](LICENSE)
