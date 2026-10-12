@@ -1,6 +1,6 @@
 ---
 name: aclib-import
-description: Import or update AccessCodeLib (ACLib) modules in a Microsoft Access database via the aclib-import MCP server (ACLib Import Wizard automation API). Use when the user wants to include or update an ACLib module (e.g. SqlTools, FilterStringBuilder, filter form, StringCollection), needs a module with a <codelib> block, wants dynamic SQL secured with ACLib data modules, or asks which ACLib modules are installed.
+description: Import or update AccessCodeLib (ACLib) modules in a Microsoft Access database via the aclib-import MCP server (ACLib Import Wizard automation API). Use when the user wants to include or update an ACLib module (e.g. SqlTools, FilterStringBuilder, filter form, StringCollection), needs a module with a <codelib> block, wants dynamic SQL secured with ACLib data modules, asks which ACLib module solves a task (find or choose a module for X), or asks which ACLib modules are installed.
 ---
 
 # ACLib import via the aclib-import MCP server
@@ -35,9 +35,43 @@ Only the tools of the `aclib-import` MCP server are used.
 - `repo`: GitHub repository `owner/name[@branch]` (implies `source=github`, default
   `AccessCodeLib/AccessCodeLib@master`); not combinable with `source=local`.
 
+## Catalog (finding modules)
+The repository contains a generated module catalog built from the `<codelib>` header blocks:
+- `_codelib/catalog/catalog.md`: one line per module, grouped by folder: path, kind, `[P]` (predeclared
+  class), description, `uses` (direct dependencies). Small enough to read completely.
+- `_codelib/catalog/catalog.json`: details per module: `path`, `name`, `kind`, `description`,
+  `descriptionSource` (`tag`/`header`/`none`), `predeclaredId`, `uses`, `usesTransitive`, `usedBy`,
+  `replaces`, `references`, `tests`, `examples`, `executes`, `publicMembers`. Large file: never read it
+  completely, search the entry by `"path": "<file>"` (e.g. Grep with about 80 lines of context).
+
+Catalog location (from `aclib_get_config`):
+- `localRepositoryPath` set: read `<localRepositoryPath>/_codelib/catalog/catalog.md` and `catalog.json`.
+- Otherwise GitHub raw:
+  `https://raw.githubusercontent.com/<owner>/<repo>/<branch>/_codelib/catalog/catalog.md`
+  (and `catalog.json`) with the values of `github{owner,repo,branch}`.
+- No catalog found (e.g. older branch, HTTP 404): say so and ask the user for the module path.
+  Do not guess paths.
+
+Selecting modules:
+- Match the task against description, path and module name; check `publicMembers` of the candidates
+  to confirm that they provide the required functionality.
+- Prefer modules with `descriptionSource: tag`; header-only descriptions can be vague, check the members.
+- Alternatives with the same object name (e.g. `text/StringTools.bas` / `text/StringTools.cls`,
+  `form/filter/FilterControl.cls` / `form/filter/FilterControl_DotNetLib.cls`) cannot be imported together.
+  Choose one; default is the variant without `_DotNetLib`. If unclear, ask the user.
+  `replaces` shows which module supersedes another.
+- Modules named `*_Example*` / `*_Beispiel*` and example forms only on request; tell the user about
+  `examples` of a candidate (importable with `examples=true`).
+- Request only the main module(s); dependencies are added by `aclib_resolve`.
+- If the catalog contains nothing suitable, say so. Do not invent modules or paths.
+
 ## Workflow
+0. **Discover (only if the user did not name the file paths):** read the catalog (see Catalog), then
+   show the user a table of candidates: file, description, relevant public members, dependencies
+   (`usesTransitive`), tests/examples. Recommend one with a short reason and wait for the user's choice.
+   Mark candidates that are already installed (step 2).
 1. **Check API:** `aclib_get_version`. On error: stop, see Troubleshooting.
-2. **Installed modules:** `aclib_list_installed`.
+2. **Installed modules:** `aclib_list_installed`. Do not propose installed modules again as new imports.
 3. **Plan (read only):** `aclib_resolve` with the requested files and options.
    Show the user a table: name, file, action, dependencies, references (status), tests/examples,
    plus `missing` and `executes`. Point out `overwrite`, `replaced`, `missing` and reference changes.
@@ -60,6 +94,9 @@ Only the tools of the `aclib-import` MCP server are used.
 - Missing dependencies (`missing` with `requiredBy`) are skipped by the import -> report them,
   the project will probably not compile.
 - Never run `aclib_import` / `aclib_compile` while other tools or the user change the same database.
+- Take `files` paths only from the catalog or from the user, never guessed.
+- If the catalog was read from another source than the import uses (e.g. local catalog, import from GitHub
+  `master`), tell the user: a module may differ or be missing there; `aclib_resolve` reports it in `missing`.
 
 ## Behaviour of the server
 - If the database is open in a running Access instance (e.g. the user's window), the server uses that
