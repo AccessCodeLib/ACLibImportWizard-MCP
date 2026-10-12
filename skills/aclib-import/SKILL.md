@@ -38,10 +38,12 @@ Only the tools of the `aclib-import` MCP server are used.
 ## Catalog (finding modules)
 The repository contains a generated module catalog built from the `<codelib>` header blocks:
 - `_codelib/catalog/catalog.md`: one line per module, grouped by folder: path, kind, `[P]` (predeclared
-  class), description, `uses` (direct dependencies). Small enough to read completely.
+  class), description, `uses` (direct dependencies), `same object name as` (variants). Small enough to
+  read completely.
 - `_codelib/catalog/catalog.json`: details per module: `path`, `name`, `kind`, `description`,
   `descriptionSource` (`tag`/`header`/`none`), `predeclaredId`, `uses`, `usesTransitive`, `usedBy`,
-  `replaces`, `references`, `tests`, `examples`, `executes`, `publicMembers`. Large file: never read it
+  `replaces`, `sameObjectName`, `references`, `tests`, `examples`, `executes`, `publicMembers`.
+  Large file: never read it
   completely, search the entry by `"path": "<file>"` (e.g. Grep with about 80 lines of context).
 
 Catalog location (from `aclib_get_config`):
@@ -56,12 +58,13 @@ Selecting modules:
 - Match the task against description, path and module name; check `publicMembers` of the candidates
   to confirm that they provide the required functionality.
 - Prefer modules with `descriptionSource: tag`; header-only descriptions can be vague, check the members.
-- Alternatives with the same object name (e.g. `text/StringTools.bas` / `text/StringTools.cls`,
+- Variants (`sameObjectName`, e.g. `text/StringTools.cls` / `text/StringTools.bas`,
   `form/filter/FilterControl.cls` / `form/filter/FilterControl_DotNetLib.cls`) cannot be imported together.
-  Choose one; default is the variant without `_DotNetLib`. If unclear, ask the user.
-  `replaces` shows which module supersedes another.
-- Modules named `*_Example*` / `*_Beispiel*` and example forms only on request; tell the user about
-  `examples` of a candidate (importable with `examples=true`).
+  Choose one according to the use case in the description (e.g. `_DotNetLib` only with the ACLib DotNetLib);
+  if unclear, ask the user. Check `aclib_list_installed` for an installed variant before proposing another.
+- `replaces` shows which module supersedes another (e.g. `data/SqlTools.cls` replaces `data/SqlTools.bas`).
+- Examples live in `_examples/` and are not listed as modules; tell the user about the `examples` of a
+  candidate (importable with `examples=true`).
 - Request only the main module(s); dependencies are added by `aclib_resolve`.
 - If the catalog contains nothing suitable, say so. Do not invent modules or paths.
 
