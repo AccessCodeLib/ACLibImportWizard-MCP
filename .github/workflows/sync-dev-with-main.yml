@@ -1,0 +1,25 @@
+name: Sync dev with main
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fast-forward-dev:
+    if: github.event.pull_request.merged == true && github.event.pull_request.head.ref == 'dev'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Fast-forward dev to main
+        run: |
+          git fetch origin main
+          git merge --ff-only origin/main
+          git push origin dev
