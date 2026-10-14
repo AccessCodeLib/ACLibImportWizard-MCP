@@ -78,6 +78,7 @@ Selecting modules:
 3. **Plan (read only):** `aclib_resolve` with the requested files and options.
    Show the user a table: name, file, action, dependencies, references (status), tests/examples,
    plus `missing` and `executes`. Point out `overwrite`, `replaced`, `missing` and reference changes.
+   For every `overwrite`, add the reminder about local edits (see Rules).
 4. **After approval:** `aclib_import` with the same arguments as `aclib_resolve`.
    Report `files` (action per file), `missing`, `references.added/removed`, `executes`, `messages`.
 5. **Compile (after approval):** `aclib_compile`. On `compiled: false`: stop and ask the user to compile
@@ -90,8 +91,12 @@ Selecting modules:
 - `tests=true` imports AccUnit test classes; they need the AccUnit test environment in the database,
   otherwise the project will not compile (the dependency is not listed in `references`). Ask the user
   whether AccUnit is set up before importing tests.
-- Never edit ACLib files in the project (keeps them updatable via the wizard). Bugs in ACLib code
-  are reported for the AccessCodeLib repository, not fixed in the project.
+- ACLib modules may be edited in the project when needed. Keep such changes small and tell the user about
+  them: they have to be sent back to the CodeLib by exporting with the ACLib Import Wizard (this skill and
+  the MCP server do not export). Local edits that were not sent back are lost on an `overwrite`.
+- Before an import with the action `overwrite` (also `mode=all`), point out that edits of the module in the
+  project would be replaced and ask the user to send them back to the CodeLib first, or to confirm that
+  nothing needs to be kept.
 - `Option Compare Database` in ACLib modules stays as it is.
 - Tool error -> stop and report the message; no workarounds, do not retry blindly.
 - Missing dependencies (`missing` with `requiredBy`) are skipped by the import -> report them,
