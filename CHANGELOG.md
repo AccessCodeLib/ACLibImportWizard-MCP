@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 - Skill `aclib-import`: find suitable modules for a task in the ACLib catalog
   (`_codelib/catalog/catalog.md` / `catalog.json`, local repository or GitHub) before resolving the import.
+- Skill `aclib-import`: read the tests and examples listed in the catalog as usage reference when it is
+  unclear how a module is meant to be used (no import required).
 
 ## [0.1.0] - 2026-10-12
 
