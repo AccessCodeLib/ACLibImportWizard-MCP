@@ -68,6 +68,13 @@ Selecting modules:
 - Request only the main module(s); dependencies are added by `aclib_resolve`.
 - If the catalog contains nothing suitable, say so. Do not invent modules or paths.
 
+## Using a module (tests as usage reference)
+- If it is unclear how a module is meant to be used, read its tests and examples: they show typical
+  calls, parameters and expected results. The catalog lists them per module (`tests`, `examples`
+  in `catalog.json`); read them from the catalog location (local repository or GitHub raw).
+  Reading does not require an import.
+- If the tests do not cover the intended use either, say so; do not guess the behaviour.
+
 ## Workflow
 0. **Discover (only if the user did not name the file paths):** read the catalog (see Catalog), then
    show the user a table of candidates: file, description, relevant public members, dependencies
