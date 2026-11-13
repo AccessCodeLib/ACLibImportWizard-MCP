@@ -78,7 +78,8 @@ should require approval.
 
 [`skills/aclib-import/SKILL.md`](skills/aclib-import/SKILL.md) describes the workflow for agents
 (find modules in the ACLib catalog → check version → list installed → resolve → import after approval →
-compile). For Claude Code, copy the
+compile). If the usage of a module is unclear, the skill points agents to its tests and examples listed in
+the catalog. For Claude Code, copy the
 folder `skills/aclib-import` to `~/.claude/skills/`.
 
 ## How it works
