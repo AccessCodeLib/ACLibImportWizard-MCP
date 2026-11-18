@@ -5,9 +5,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-18
+
 ### Added
+- MCP tool `aclib_find`: search the module catalog by keywords and return only the matching modules
+  (path, description, dependencies, variants, tests/examples, public members) instead of reading the whole
+  catalog. Search words are OR-combined and ranked by matched words; without a match (or with
+  `overview=true`) a compact list of all modules is returned so that the caller can choose by meaning.
+- Server instructions and tool descriptions point to the skill `aclib-import`, to catalog-only file paths
+  and to approval before `aclib_import` / `aclib_compile`.
 - Skill `aclib-import`: find suitable modules for a task in the ACLib catalog
   (`_codelib/catalog/catalog.md` / `catalog.json`, local repository or GitHub) before resolving the import.
+- Skill `aclib-import`: read the tests and examples listed in the catalog as usage reference when it is
+  unclear how a module is meant to be used (no import required).
 
 ## [0.1.0] - 2026-10-12
 

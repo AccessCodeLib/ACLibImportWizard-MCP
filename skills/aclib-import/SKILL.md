@@ -22,6 +22,7 @@ Only the tools of the `aclib-import` MCP server are used.
 |---|---|---|
 | `aclib_get_version` | `database_path` | no |
 | `aclib_get_config` | `database_path`, `source?`, `repo?` | no |
+| `aclib_find` | `database_path`, `query`, `source?`, `repo?`, `limit?` | no |
 | `aclib_list_installed` | `database_path` | no |
 | `aclib_resolve` | `database_path`, `files[]`, `mode?`, `tests?`, `examples?`, `source?`, `repo?` | no |
 | `aclib_import` | same as `aclib_resolve` | yes (may overwrite) |
@@ -46,6 +47,13 @@ The repository contains a generated module catalog built from the `<codelib>` he
   Large file: never read it
   completely, search the entry by `"path": "<file>"` (e.g. Grep with about 80 lines of context).
 
+Searching (saves tokens): call `aclib_find` with several English synonyms of the task (the catalog is
+English and the match is literal text, not meaning; e.g. a "Suchformular" is `search filter criteria form`).
+Any word may match, modules with more matching words rank higher. It returns only matching modules with
+`uses`, `sameObjectName`, `tests`, `examples` and the matching `publicMembers`. If nothing matches (or with
+`overview=true`) it returns a compact list of all modules: choose by meaning from it. Never conclude that
+no suitable module exists from one unsuccessful search.
+
 Catalog location (from `aclib_get_config`):
 - `localRepositoryPath` set: read `<localRepositoryPath>/_codelib/catalog/catalog.md` and `catalog.json`.
 - Otherwise GitHub raw:
@@ -68,8 +76,15 @@ Selecting modules:
 - Request only the main module(s); dependencies are added by `aclib_resolve`.
 - If the catalog contains nothing suitable, say so. Do not invent modules or paths.
 
+## Using a module (tests as usage reference)
+- If it is unclear how a module is meant to be used, read its tests and examples: they show typical
+  calls, parameters and expected results. The catalog lists them per module (`tests`, `examples`
+  in `catalog.json`); read them from the catalog location (local repository or GitHub raw).
+  Reading does not require an import.
+- If the tests do not cover the intended use either, say so; do not guess the behaviour.
+
 ## Workflow
-0. **Discover (only if the user did not name the file paths):** read the catalog (see Catalog), then
+0. **Discover (only if the user did not name the file paths):** search the catalog (`aclib_find`, see Catalog), then
    show the user a table of candidates: file, description, relevant public members, dependencies
    (`usesTransitive`), tests/examples. Recommend one with a short reason and wait for the user's choice.
    Mark candidates that are already installed (step 2).
@@ -102,7 +117,8 @@ Selecting modules:
 - Missing dependencies (`missing` with `requiredBy`) are skipped by the import -> report them,
   the project will probably not compile.
 - Never run `aclib_import` / `aclib_compile` while other tools or the user change the same database.
-- Take `files` paths only from the catalog or from the user, never guessed.
+- Take `files` paths only from the catalog (`aclib_find` / `catalog.md`) or from the user, never guessed.
+  Do not claim that there is no way to find modules: the catalog and `aclib_find` exist.
 - If the catalog was read from another source than the import uses (e.g. local catalog, import from GitHub
   `master`), tell the user: a module may differ or be missing there; `aclib_resolve` reports it in `missing`.
 

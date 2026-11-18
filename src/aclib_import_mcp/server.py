@@ -13,11 +13,27 @@ from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
-from . import addin
+from . import addin, catalog
 from .access_com import AccessComError, AccessWorker
 from .addin import AclibApiError, AddinError
 
-mcp = FastMCP("aclib-import")
+INSTRUCTIONS = """\
+ACLib Import Wizard MCP server: import or update AccessCodeLib (ACLib) modules in a Microsoft \
+Access database.
+
+Use the skill aclib-import before working with the aclib_* tools. If it is not available in the \
+project, tell the user and offer to continue without it only after they agree.
+
+Essential rules if the skill is not available:
+- To find a module for a task use aclib_find (search in the module catalog). Never guess file \
+paths: take them from aclib_find, the catalog (_codelib/catalog/catalog.md) or from the user.
+- Order: aclib_get_version, aclib_list_installed, aclib_resolve (show the planned actions to the \
+user), then aclib_import and aclib_compile only after the user approved them.
+- mode=all/selected and the action overwrite only after explicit confirmation: local edits of a \
+module in the project would be lost.
+"""
+
+mcp = FastMCP("aclib-import", instructions=INSTRUCTIONS)
 
 Mode = Literal["missing", "all", "selected"]
 Source = Literal["config", "local", "github"]
@@ -192,8 +208,58 @@ async def aclib_get_config(
     source: SourceParam = "config",
     repo: RepoParam = None,
 ) -> dict[str, Any]:
-    """Return the wizard configuration: repositories and the resulting source."""
+    """Return the wizard configuration: repositories and the resulting source.
+
+    The module catalog is at <localRepositoryPath>/_codelib/catalog/catalog.md (or on GitHub
+    raw); to search it use aclib_find.
+    """
     return await _call_api(database_path, "GetConfig", build_source_options(source, repo))
+
+
+@mcp.tool(annotations=READ_ONLY.model_copy(update={"openWorldHint": True}))
+async def aclib_find(
+    database_path: DatabasePath,
+    query: Annotated[
+        str,
+        Field(
+            description="English search words and synonyms (any may match, more matching words "
+            "rank higher), e.g. 'search filter criteria form'. The catalog is English: "
+            "translate the task into several synonyms.",
+            min_length=1,
+        ),
+    ],
+    source: SourceParam = "config",
+    repo: RepoParam = None,
+    limit: Annotated[
+        int, Field(description="Maximum number of modules returned.", ge=1, le=25)
+    ] = 8,
+    overview: Annotated[
+        bool,
+        Field(description="Also return a compact list of all modules (path and description)."),
+    ] = False,
+) -> dict[str, Any]:
+    """Find ACLib modules in the module catalog (instead of reading the whole catalog).
+
+    The match is literal text, not meaning: pass several English synonyms of the task. If
+    nothing matches (or overview=true), a compact list of all modules is returned; choose
+    from it by meaning and do not conclude that no suitable module exists.
+
+    Returns per match: path, description, uses (dependencies), replaces, sameObjectName
+    (variants that cannot be imported together), tests, examples and public members.
+    Show the candidates to the user and let them choose; pass the chosen paths to
+    aclib_resolve. Reads only; does not change the database.
+    """
+    config = await _call_api(database_path, "GetConfig", build_source_options(source, repo))
+
+    def run() -> dict[str, Any]:
+        origin = catalog.catalog_origin(config, source, validate_repo(repo, source))
+        result = catalog.search_modules(catalog.load_catalog(origin), query, limit, overview)
+        return {"ok": True, "catalog": origin, **result}
+
+    try:
+        return await anyio.to_thread.run_sync(run)
+    except (catalog.CatalogError, ValueError) as exc:
+        raise ToolError(str(exc)) from exc
 
 
 @mcp.tool(annotations=READ_ONLY.model_copy(update={"openWorldHint": False}))
@@ -212,10 +278,12 @@ async def aclib_resolve(
     source: SourceParam = "config",
     repo: RepoParam = None,
 ) -> dict[str, Any]:
-    """Plan an import without changing the database.
+    """Plan an import without changing the database. Use the skill aclib-import first.
 
+    Take file paths only from aclib_find, the catalog or the user, never guess them.
     Returns the files incl. dependencies, references, tests/examples, the planned action per
-    file (import/skip/overwrite/replaced) and missing files. Call before aclib_import.
+    file (import/skip/overwrite/replaced) and missing files. Call before aclib_import and
+    show the result to the user.
     """
     file_list = ";".join(validate_files(files))
     options = build_options(mode, tests, examples, source, repo)
@@ -238,6 +306,8 @@ async def aclib_import(
 ) -> dict[str, Any]:
     """Import ACLib modules incl. dependencies and references into the database.
 
+    Use the skill aclib-import first. Only after the user approved the plan of aclib_resolve;
+    take file paths only from aclib_find, the catalog or the user, never guess them.
     Existing modules may be overwritten (mode=all/selected). Use the same arguments as a
     previous aclib_resolve. Compile the project afterwards.
     """

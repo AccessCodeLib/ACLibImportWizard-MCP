@@ -7,7 +7,7 @@ without the wizard UI.
 
 The server only needs the Import Wizard add-in. No other Access MCP server is required.
 
-> Status: early development (0.1.0, first release).
+> Status: early development (0.2.0).
 
 ## Prerequisites
 
@@ -61,6 +61,7 @@ Set them in the MCP server configuration, e.g.:
 |---|---|---|---|
 | `aclib_get_version` | `database_path` | no | add-in and API version |
 | `aclib_get_config` | `database_path`, `source?`, `repo?` | no | configured repositories, resulting source |
+| `aclib_find` | `database_path`, `query`, `source?`, `repo?`, `limit?` | no | matching catalog modules: path, description, dependencies, variants, tests/examples, public members |
 | `aclib_list_installed` | `database_path` | no | ACLib modules in the database (from their `<codelib>` blocks) |
 | `aclib_resolve` | `database_path`, `files[]`, `mode?`, `tests?`, `examples?`, `source?`, `repo?` | no | files incl. dependencies, references, tests/examples, planned action, missing files |
 | `aclib_import` | same as `aclib_resolve` | yes (may overwrite) | imported/skipped files, missing dependencies, added/removed references, messages |
@@ -78,7 +79,8 @@ should require approval.
 
 [`skills/aclib-import/SKILL.md`](skills/aclib-import/SKILL.md) describes the workflow for agents
 (find modules in the ACLib catalog → check version → list installed → resolve → import after approval →
-compile). For Claude Code, copy the
+compile). If the usage of a module is unclear, the skill points agents to its tests and examples listed in
+the catalog. For Claude Code, copy the
 folder `skills/aclib-import` to `~/.claude/skills/`.
 
 ## How it works
