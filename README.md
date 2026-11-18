@@ -7,7 +7,7 @@ without the wizard UI.
 
 The server only needs the Import Wizard add-in. No other Access MCP server is required.
 
-> Status: early development (0.1.0, first release).
+> Status: early development (0.2.0).
 
 ## Prerequisites
 
