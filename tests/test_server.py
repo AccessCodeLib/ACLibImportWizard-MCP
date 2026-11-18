@@ -198,16 +198,89 @@ def test_tools_are_registered_with_annotations():
     assert set(tools) == {
         "aclib_get_version",
         "aclib_get_config",
+        "aclib_find",
         "aclib_list_installed",
         "aclib_resolve",
         "aclib_import",
         "aclib_compile",
     }
-    for name in ("aclib_get_version", "aclib_get_config", "aclib_list_installed", "aclib_resolve"):
+    for name in (
+        "aclib_get_version",
+        "aclib_get_config",
+        "aclib_find",
+        "aclib_list_installed",
+        "aclib_resolve",
+    ):
         assert tools[name].annotations.readOnlyHint is True
     assert tools["aclib_import"].annotations.readOnlyHint is False
     assert tools["aclib_import"].annotations.destructiveHint is True
     assert tools["aclib_compile"].annotations.readOnlyHint is False
+
+
+def test_instructions_point_to_skill_and_catalog():
+    assert "aclib-import" in server.mcp.instructions
+    assert "aclib_find" in server.mcp.instructions
+    assert "Never guess" in server.mcp.instructions
+
+
+def test_write_tools_point_to_skill():
+    tools = {tool.name: tool for tool in anyio.run(server.mcp.list_tools)}
+    for name in ("aclib_resolve", "aclib_import"):
+        assert "skill aclib-import" in tools[name].description
+        assert "never guess" in tools[name].description
+
+
+def test_find_reads_local_catalog(use_worker, tmp_path):
+    catalog_file = tmp_path / "_codelib" / "catalog" / "catalog.json"
+    catalog_file.parent.mkdir(parents=True)
+    catalog_file.write_text(
+        json.dumps(
+            {
+                "modules": [
+                    {"path": "data/SqlTools.cls", "name": "SqlTools", "description": "SQL helper"},
+                    {
+                        "path": "form/filter/FilterControl.cls",
+                        "name": "FilterControl",
+                        "description": "Filter form control",
+                        "uses": ["data/SqlTools.cls"],
+                        "publicMembers": ["Sub Apply()"],
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    config = json.dumps({"ok": True, "localRepositoryPath": str(tmp_path)})
+    app = FakeApp({"GetVersion": VERSION_OK, "GetConfig": config})
+    use_worker(FakeWorker(app))
+
+    result = call(server.aclib_find, database_path=DB, query="Filter")
+
+    assert result["total"] == 1
+    assert result["modules"][0]["path"] == "form/filter/FilterControl.cls"
+    assert result["modules"][0]["uses"] == ["data/SqlTools.cls"]
+    assert app.calls[-1] == ("GetConfig", "source=config")
+
+
+def test_find_without_match_returns_empty_list(use_worker, tmp_path):
+    catalog_file = tmp_path / "_codelib" / "catalog" / "catalog.json"
+    catalog_file.parent.mkdir(parents=True)
+    catalog_file.write_text(json.dumps({"modules": []}), encoding="utf-8")
+    config = json.dumps({"ok": True, "localRepositoryPath": str(tmp_path)})
+    use_worker(FakeWorker(FakeApp({"GetVersion": VERSION_OK, "GetConfig": config})))
+
+    result = call(server.aclib_find, database_path=DB, query="nothing")
+
+    assert result["total"] == 0
+    assert result["modules"] == []
+
+
+def test_find_missing_catalog_becomes_tool_error(use_worker, tmp_path):
+    config = json.dumps({"ok": True, "localRepositoryPath": str(tmp_path)})
+    use_worker(FakeWorker(FakeApp({"GetVersion": VERSION_OK, "GetConfig": config})))
+
+    with pytest.raises(ToolError, match="Catalog could not be read"):
+        call(server.aclib_find, database_path=DB, query="filter")
 
 
 class CompileApp:

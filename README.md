@@ -61,6 +61,7 @@ Set them in the MCP server configuration, e.g.:
 |---|---|---|---|
 | `aclib_get_version` | `database_path` | no | add-in and API version |
 | `aclib_get_config` | `database_path`, `source?`, `repo?` | no | configured repositories, resulting source |
+| `aclib_find` | `database_path`, `query`, `source?`, `repo?`, `limit?` | no | matching catalog modules: path, description, dependencies, variants, tests/examples, public members |
 | `aclib_list_installed` | `database_path` | no | ACLib modules in the database (from their `<codelib>` blocks) |
 | `aclib_resolve` | `database_path`, `files[]`, `mode?`, `tests?`, `examples?`, `source?`, `repo?` | no | files incl. dependencies, references, tests/examples, planned action, missing files |
 | `aclib_import` | same as `aclib_resolve` | yes (may overwrite) | imported/skipped files, missing dependencies, added/removed references, messages |
